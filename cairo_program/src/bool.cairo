@@ -11,7 +11,7 @@ fn main() {
 fn is_adult(x: u8) -> bool {
     // let mut outcome: bool = false;
     if x <= 18 {
-        // outcome = false;
+   =;/ outcome = false;
         return false;
     }
     // outcome = true;
