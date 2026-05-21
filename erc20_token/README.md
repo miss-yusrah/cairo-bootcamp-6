@@ -28,8 +28,8 @@ Pass addresses and token settings in this order:
 
 1. `admin` — admin address (stored as `owner`)
 2. `recipient` — initial token holder
-3. `name` — token name (felt252)
-4. `symbol` — ticker (felt252)
+3. `name` — token name (`ByteArray`)
+4. `symbol` — ticker (`ByteArray`)
 5. `decimals` — e.g. `18`
 6. `initial_supply` — tokens minted to `recipient`
 
@@ -43,4 +43,3 @@ Contract module name for declare: **`ERC20Token`**
 | `transfer_from` | Approved spender |
 | `burn`, `set_max_limit` | Admin (`owner`) |
 | `get_owner`, `balance_of`, … | Anyone (read-only) |
-

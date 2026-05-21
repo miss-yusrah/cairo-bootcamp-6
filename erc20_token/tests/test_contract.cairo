@@ -2,6 +2,7 @@ use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address,
     stop_cheat_caller_address,
 };
+use core::serde::Serde;
 use starknet::ContractAddress;
 
 use erc20_token::interfaces::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -22,17 +23,18 @@ fn spender() -> ContractAddress {
 fn deploy(
     admin_addr: ContractAddress,
     recipient: ContractAddress,
-    initial_supply: felt252,
+    initial_supply: u256,
 ) -> ContractAddress {
     let contract = declare("ERC20Token").unwrap().contract_class();
-    let mut calldata = array![
-        admin_addr.into(),
-        recipient.into(),
-        'TestToken',
-        'TTK',
-        18,
-        initial_supply,
-    ];
+    let name: ByteArray = "TestToken";
+    let symbol: ByteArray = "TTK";
+    let mut calldata = array![];
+    admin_addr.serialize(ref calldata);
+    recipient.serialize(ref calldata);
+    name.serialize(ref calldata);
+    symbol.serialize(ref calldata);
+    18_u8.serialize(ref calldata);
+    initial_supply.serialize(ref calldata);
     let (address, _) = contract.deploy(@calldata).unwrap();
     address
 }
@@ -42,8 +44,8 @@ fn constructor_sets_state() {
     let token = deploy(admin(), user(), 50_000);
     let dispatcher = IERC20Dispatcher { contract_address: token };
 
-    assert(dispatcher.get_name() == 'TestToken', 'name');
-    assert(dispatcher.get_symbol() == 'TTK', 'symbol');
+    assert(dispatcher.get_name() == "TestToken", 'name');
+    assert(dispatcher.get_symbol() == "TTK", 'symbol');
     assert(dispatcher.get_decimals() == 18, 'decimals');
     assert(dispatcher.get_total_supply() == 50_000, 'supply');
     assert(dispatcher.get_owner() == admin(), 'owner');
@@ -120,6 +122,19 @@ fn revoke_clears_allowance() {
 }
 
 #[test]
+fn owner_can_mint_from_zero_address() {
+    let token = deploy(admin(), user(), 10_000);
+    let dispatcher = IERC20Dispatcher { contract_address: token };
+
+    start_cheat_caller_address(token, admin());
+    dispatcher.mint(admin(), 2_500);
+    stop_cheat_caller_address(token);
+
+    assert(dispatcher.balance_of(admin()) == 2_500, 'minted balance');
+    assert(dispatcher.get_total_supply() == 12_500, 'minted supply');
+}
+
+#[test]
 fn owner_burn_reduces_balance_and_supply() {
     let token = deploy(admin(), user(), 10_000);
     let dispatcher = IERC20Dispatcher { contract_address: token };
@@ -156,5 +171,16 @@ fn non_owner_cannot_burn() {
 
     start_cheat_caller_address(token, user());
     dispatcher.burn(user(), 1);
+    stop_cheat_caller_address(token);
+}
+
+#[test]
+#[should_panic(expected: ('Not owner',))]
+fn non_owner_cannot_mint() {
+    let token = deploy(admin(), user(), 10_000);
+    let dispatcher = IERC20Dispatcher { contract_address: token };
+
+    start_cheat_caller_address(token, user());
+    dispatcher.mint(user(), 1);
     stop_cheat_caller_address(token);
 }
